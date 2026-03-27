@@ -6,6 +6,9 @@
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
 
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+
     <div class="hero-content">
       <div class="hero-badge">
         <span class="hero-badge-dot"></span>
@@ -50,39 +53,55 @@
 .hero {
   position: relative;
   min-height: 100vh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 120px 24px 80px;
-  text-align: center;
-  overflow: hidden;
 }
 .hero-bg {
-  position: absolute; inset: 0; z-index: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(134, 59, 255, 0.25), transparent),
     radial-gradient(ellipse 60% 40% at 20% 60%, rgba(59, 130, 246, 0.08), transparent),
     radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168, 85, 247, 0.08), transparent);
 }
 .hero-grid {
-  position: absolute; inset: 0; z-index: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background-image:
     linear-gradient(rgba(134, 59, 255, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(134, 59, 255, 0.04) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
   -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+  overflow: hidden;
 }
-.hero-content { position: relative; z-index: 1; max-width: 800px; }
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  text-align: center;
+}
 .hero-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 16px; border-radius: 100px; font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-size: 13px;
   background: rgba(134, 59, 255, 0.1);
   border: 1px solid rgba(134, 59, 255, 0.2);
   color: #c4b5fd;
   margin-bottom: 24px;
-  animation: fadeUp 0.6s ease both;
 }
 .hero-badge-dot {
-  width: 6px; height: 6px; border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: #a855f7;
   animation: glow 2s ease infinite;
 }
@@ -101,20 +120,24 @@
 .hero p {
   font-size: clamp(16px, 2vw, 20px);
   color: #a1a1aa;
-  max-width: 560px;
+  line-height: 1.6;
+  max-width: 600px;
   margin: 0 auto 40px;
   animation: fadeUp 0.6s ease 0.2s both;
 }
 .hero-actions {
-  display: flex; align-items: center; justify-content: center; gap: 16px;
-  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
   animation: fadeUp 0.6s ease 0.3s both;
 }
 .hero-screenshot {
-  position: relative; z-index: 1;
+  position: relative;
+  z-index: 1;
   margin-top: 64px;
-  max-width: 960px; width: 100%;
-  animation: fadeUp 0.8s ease 0.5s both;
+  max-width: 960px;
+  width: 100%;
 }
 .hero-screenshot img {
   width: 100%;
@@ -126,23 +149,42 @@
 }
 .hero-screenshot-glow {
   position: absolute;
-  bottom: -40px; left: 50%; transform: translateX(-50%);
-  width: 80%; height: 80px;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 80px;
   background: radial-gradient(ellipse, rgba(134, 59, 255, 0.2), transparent);
   filter: blur(40px);
   pointer-events: none;
 }
 .hero-platforms {
-  display: flex; align-items: center; justify-content: center; gap: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
   margin-top: 20px;
-  font-size: 13px; color: #71717a;
+  font-size: 13px;
+  color: #71717a;
   animation: fadeUp 0.6s ease 0.4s both;
 }
-.hero-platforms span { display: flex; align-items: center; gap: 6px; }
-.hero-platforms svg { width: 16px; height: 16px; fill: #71717a; }
+.hero-platforms span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-platforms svg {
+  width: 16px;
+  height: 16px;
+  fill: #71717a;
+}
 
 @media (max-width: 600px) {
-  .hero { padding: 100px 16px 60px; }
-  .hero-actions { flex-direction: column; }
+  .hero {
+    padding: 100px 16px 60px;
+  }
+  .hero-actions {
+    flex-direction: column;
+  }
 }
 </style>

@@ -9,6 +9,7 @@ useScrollAnimation(sectionRef)
 <template>
   <section ref="sectionRef" class="cta-section" id="download">
     <div class="cta-bg"></div>
+    <div class="cta-bg"></div>
     <div class="cta-content animate-on-scroll">
       <div class="section-label">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -39,15 +40,16 @@ useScrollAnimation(sectionRef)
   position: relative;
   padding: 120px 24px;
   text-align: center;
-  overflow: hidden;
 }
 .cta-bg {
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(ellipse 80% 60% at 50% 100%, rgba(134, 59, 255, 0.15), transparent);
 }
 .cta-content {
-  position: relative; z-index: 1;
+  position: relative;
+  z-index: 1;
   max-width: 640px;
   margin: 0 auto;
 }
@@ -58,16 +60,23 @@ useScrollAnimation(sectionRef)
   margin: 0 auto 40px;
 }
 .cta-buttons {
-  display: flex; align-items: center; justify-content: center; gap: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
   flex-wrap: wrap;
 }
 .download-btn {
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 16px 28px; border-radius: 12px; font-size: 15px; font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #d4d4d8;
-  cursor: pointer;
   transition: all 0.25s;
 }
 .download-btn:hover {
@@ -75,9 +84,17 @@ useScrollAnimation(sectionRef)
   border-color: rgba(134, 59, 255, 0.3);
   color: #fff;
 }
-.download-btn svg { width: 20px; height: 20px; }
+.download-btn svg {
+  width: 20px;
+  height: 20px;
+}
 
 @media (max-width: 600px) {
-  .cta-section { padding: 80px 16px; }
+  .cta-section {
+    padding: 80px 16px;
+  }
+  .cta-buttons {
+    flex-direction: column;
+  }
 }
 </style>

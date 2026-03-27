@@ -85,7 +85,10 @@ const features: FeatureItem[] = [
 }
 .feature-card::before {
   content: "";
-  position: absolute; top: 0; left: 0; right: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(134, 59, 255, 0.3), transparent);
   opacity: 0;
@@ -94,17 +97,22 @@ const features: FeatureItem[] = [
 .feature-card:hover {
   background: rgba(134, 59, 255, 0.04);
   border-color: rgba(134, 59, 255, 0.15);
-  transform: translateY(-4px);
 }
-.feature-card:hover::before { opacity: 1; }
+.feature-card:hover::before {
+  opacity: 1;
+}
 .feature-icon {
-  width: 48px; height: 48px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 22px;
   background: rgba(134, 59, 255, 0.1);
   border: 1px solid rgba(134, 59, 255, 0.15);
+  color: #fafafa;
+  margin-bottom: 16px;
 }
 .feature-card h3 {
   font-size: 18px;
@@ -119,9 +127,13 @@ const features: FeatureItem[] = [
 }
 
 @media (max-width: 900px) {
-  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media (max-width: 600px) {
-  .features-grid { grid-template-columns: 1fr; }
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

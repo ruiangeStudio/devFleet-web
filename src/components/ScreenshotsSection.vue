@@ -83,9 +83,13 @@ function onImageLoad(): void {
   padding: 0 24px;
   margin-bottom: 64px;
 }
-.screenshots-header .section-desc { margin: 0 auto; }
+.screenshots-header .section-desc {
+  margin: 0 auto;
+}
 .screenshot-tabs {
-  display: flex; justify-content: center; gap: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
   margin-bottom: 48px;
   padding: 0 24px;
   flex-wrap: wrap;
@@ -93,27 +97,28 @@ function onImageLoad(): void {
 .screenshot-tab {
   padding: 10px 20px;
   border-radius: 10px;
-  font-size: 14px; font-weight: 500;
+  font-size: 14px;
+  font-weight: 500;
   color: #71717a;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  cursor: pointer;
   transition: all 0.25s;
+  cursor: pointer;
 }
 .screenshot-tab:hover {
   color: #d4d4d8;
   border-color: rgba(255, 255, 255, 0.15);
 }
 .screenshot-tab.active {
-  color: #fff;
   background: rgba(134, 59, 255, 0.15);
   border-color: rgba(134, 59, 255, 0.3);
+  color: #fff;
 }
 .screenshot-display {
+  position: relative;
   max-width: 960px;
   margin: 0 auto;
   padding: 0 24px;
-  position: relative;
 }
 .screenshot-frame {
   position: relative;
@@ -129,27 +134,42 @@ function onImageLoad(): void {
   display: block;
 }
 .screenshot-frame-bar {
-  display: flex; align-items: center; gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 12px 16px;
   background: rgba(24, 24, 27, 0.95);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .screenshot-frame-dot {
-  width: 12px; height: 12px; border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
 }
-.screenshot-frame-dot:nth-child(1) { background: #ef4444; }
-.screenshot-frame-dot:nth-child(2) { background: #eab308; }
-.screenshot-frame-dot:nth-child(3) { background: #22c55e; }
+.screenshot-frame-dot:nth-child(1) {
+  background: #ef4444;
+}
+.screenshot-frame-dot:nth-child(2) {
+  background: #eab308;
+}
+.screenshot-frame-dot:nth-child(3) {
+  background: #22c55e;
+}
 .screenshot-glow {
   position: absolute;
-  bottom: -60px; left: 50%; transform: translateX(-50%);
-  width: 70%; height: 120px;
+  bottom: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 120px;
   background: radial-gradient(ellipse, rgba(134, 59, 255, 0.15), transparent);
   filter: blur(50px);
   pointer-events: none;
 }
 
 @media (max-width: 600px) {
-  .screenshots-section { padding: 80px 0; }
+  .screenshots-section {
+    padding: 80px 0;
+  }
 }
 </style>
