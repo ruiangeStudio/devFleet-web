@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 
 <template>
   <footer class="footer">
     <div class="footer-inner">
-      <span>&copy; 2026 DevFleet. All rights reserved.</span>
+      <span>{{ t('footer.copyright') }}</span>
       <div class="footer-links">
         <a href="https://github.com/nieSugar/devFleet" target="_blank">GitHub</a>
-        <a href="https://github.com/nieSugar/devFleet/issues" target="_blank">反馈</a>
-        <a href="https://github.com/nieSugar/devFleet/releases" target="_blank">更新日志</a>
+        <a href="https://github.com/nieSugar/devFleet/issues" target="_blank">{{ t('footer.feedback') }}</a>
+        <a href="https://github.com/nieSugar/devFleet/releases" target="_blank">{{ t('footer.changelog') }}</a>
       </div>
     </div>
   </footer>

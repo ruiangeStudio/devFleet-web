@@ -1,29 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useScrollAnimation } from '../composables/useScrollAnimation'
-import type { ScreenshotTab } from '../types'
 
 const sectionRef = ref<HTMLElement | null>(null)
 useScrollAnimation(sectionRef)
 
-const tabs: ScreenshotTab[] = [
-  { label: '项目管理', img: '/img/ScreenShot_2026-03-27_222336_861.png' },
-  { label: 'Node 版本', img: '/img/ScreenShot_2026-03-27_222401_959.png' },
-  { label: '版本详情', img: '/img/ScreenShot_2026-03-27_222345_305.png' },
-  { label: '自动更新', img: '/img/ScreenShot_2026-03-27_222445_131.png' },
-  { label: '浅色模式', img: '/img/ScreenShot_2026-03-27_213954_784.png' }
+const { t, tm } = useI18n()
+
+const imgMap = [
+  '/img/ScreenShot_2026-03-27_222336_861.png',
+  '/img/ScreenShot_2026-03-27_222401_959.png',
+  '/img/ScreenShot_2026-03-27_222345_305.png',
+  '/img/ScreenShot_2026-03-27_222445_131.png',
+  '/img/ScreenShot_2026-03-27_213954_784.png',
 ]
+
+const tabLabels = computed(() => tm('screenshots.tabs') as string[])
 
 const activeIndex = ref(0)
 const imageOpacity = ref(1)
-const currentSrc = ref(tabs[0].img)
+const currentSrc = ref(imgMap[0])
 
 function switchTab(index: number): void {
   if (index === activeIndex.value) return
   activeIndex.value = index
   imageOpacity.value = 0
   setTimeout(() => {
-    currentSrc.value = tabs[index].img
+    currentSrc.value = imgMap[index]
   }, 200)
 }
 
@@ -37,20 +41,20 @@ function onImageLoad(): void {
     <div class="screenshots-header animate-on-scroll">
       <div class="section-label">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        界面预览
+        {{ t('screenshots.label') }}
       </div>
-      <h2 class="section-title">优雅而强大的桌面体验</h2>
-      <p class="section-desc">精心设计的界面，浅色与深色主题随心切换，让开发工作赏心悦目。</p>
+      <h2 class="section-title">{{ t('screenshots.title') }}</h2>
+      <p class="section-desc">{{ t('screenshots.desc') }}</p>
     </div>
 
     <div class="screenshot-tabs">
       <button
-        v-for="(tab, i) in tabs"
+        v-for="(label, i) in tabLabels"
         :key="i"
         :class="['screenshot-tab', { active: i === activeIndex }]"
         @click="switchTab(i)"
       >
-        {{ tab.label }}
+        {{ label }}
       </button>
     </div>
 
@@ -64,7 +68,7 @@ function onImageLoad(): void {
         <img
           :src="currentSrc"
           :style="{ opacity: imageOpacity, transition: 'opacity 0.4s ease' }"
-          alt="DevFleet 界面截图"
+          alt="DevFleet"
           @load="onImageLoad"
         />
       </div>
