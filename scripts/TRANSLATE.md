@@ -98,6 +98,30 @@ pnpm translate
 - `.env.example` 会保留在仓库里，供团队成员参考。
 - 如果你不想用 `.env`，也可以继续手动传 `--key`。
 
+## DeepL 额度检查
+
+如果你只是想看 `DeepL` Key 是否可用、当前用了多少字符、还剩多少额度，不想真的执行翻译，可以单独跑：
+
+```bash
+pnpm deepl:status
+```
+
+也支持显式传 key：
+
+```bash
+pnpm deepl:status -- --key "your-deepl-api-key:fx"
+```
+
+这个脚本只会打印：
+- API Key 是否有效
+- 已用字符数
+- 剩余额度
+- 使用占比
+
+不会：
+- 执行任何翻译
+- 改动任何 `src/i18n/messages/*.ts` 文件
+
 ## 常用命令
 
 默认翻译当前项目已启用的所有机翻语言：

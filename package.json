@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "translate": "node scripts/translate.mjs"
+    "translate": "node scripts/translate.mjs",
+    "deepl:status": "node scripts/deepl-status.mjs"
   },
   "dependencies": {
     "@microsoft/clarity": "^1.0.2",
