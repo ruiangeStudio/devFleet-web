@@ -12,6 +12,7 @@
  * - label/name: 前台菜单展示文案
  * - deeplSource/deeplTarget: 翻译脚本使用的 DeepL 语言代码
  * - manual: true 表示该语言手动维护，不参与默认机翻覆盖
+ * - translationStrategy: 可选，本地文本转换策略，适合同语种变体转换
  * - browserAliases: 用于把浏览器返回的脚本/区域标签映射到当前 locale
  */
 export default [
@@ -35,6 +36,7 @@ export default [
     isDefault: false,
     isSource: false,
     manual: false,
+    translationStrategy: 'opencc-cn-to-tw',
     dir: 'ltr',
     browserAliases: ['zh-hant', 'zh-hk', 'zh-mo'],
   },

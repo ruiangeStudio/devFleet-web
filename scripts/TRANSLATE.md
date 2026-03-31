@@ -1,6 +1,6 @@
-# 🌐 DeepL 自动翻译使用指南
+# 🌐 DeepL / OpenCC 自动翻译使用指南
 
-本项目内置了一个基于 `deepl-node` 的翻译脚本，会以 `src/i18n/messages/zh.ts` 为源语言，自动翻译并写入其他语言文件。
+本项目内置了一个基于 `deepl-node` 和 `opencc-js` 的翻译脚本，会以 `src/i18n/messages/zh.ts` 为源语言，自动翻译或转换并写入其他语言文件。
 
 ## 单一配置源
 
@@ -39,6 +39,8 @@
   目标语言对应的 DeepL 代码
 - `manual`
   为 `true` 时，不参与默认 `--all` 覆盖
+- `translationStrategy`
+  可选，本地文本转换策略，适合同语种变体，例如简体中文转繁体中文
 - `browserAliases`
   可选，用于把浏览器返回的脚本/区域语言标签映射到当前 locale
 
@@ -46,7 +48,18 @@
 
 - `code: 'zh-tw'`
 - `deeplTarget: 'ZH-HANT'`
+- `translationStrategy: 'opencc-cn-to-tw'`
 - `browserAliases: ['zh-hant', 'zh-hk', 'zh-mo']`
+
+## 繁体中文的特殊说明
+
+`zh-tw` 这门语言现在不是直接走 DeepL 翻译，而是走本地 `OpenCC` 转换。
+
+原因是 DeepL 官方翻译接口明确说明：它主要用于“不同语言之间”的翻译；如果是同一种语言的不同变体，翻译结果会保持不变。简体中文到繁体中文就属于这种情况，所以这里改成了 `OpenCC cn -> tw`，这样才会真正把 `预览` 转成 `預覽`、`开发者` 转成 `開發者`。
+
+参考：
+- [DeepL Translate Text API](https://developers.deepl.com/api-reference/translate)
+- [OpenCC / opencc-js](https://www.npmjs.com/package/opencc-js)
 
 ## 前提
 
@@ -55,7 +68,7 @@
 3. 在项目根目录安装依赖：
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## 推荐用法：`.env`
@@ -77,7 +90,7 @@ DEEPL_API_KEY=your-deepl-api-key:fx
 3. 直接执行翻译：
 
 ```bash
-npm run translate
+pnpm translate
 ```
 
 说明：
@@ -90,37 +103,37 @@ npm run translate
 默认翻译当前项目已启用的所有机翻语言：
 
 ```bash
-npm run translate
+pnpm translate
 ```
 
 翻译单个语言：
 
 ```bash
-npm run translate -- --lang ja
+pnpm translate -- --lang ja
 ```
 
 翻译多个语言：
 
 ```bash
-npm run translate -- --lang ja,ko,de,ru,fr,es,ar,zh-tw
+pnpm translate -- --lang ja,ko,de,ru,fr,es,ar,zh-tw
 ```
 
 显式翻译当前项目已启用的所有机翻语言：
 
 ```bash
-npm run translate -- --all
+pnpm translate -- --all
 ```
 
 查看帮助：
 
 ```bash
-npm run translate -- --help
+pnpm translate -- --help
 ```
 
 如果你想显式覆盖环境变量，也可以这样写：
 
 ```bash
-npm run translate -- --key "your-deepl-api-key:fx" --lang ja
+pnpm translate -- --key "your-deepl-api-key:fx" --lang ja
 ```
 
 ## `--all` 的行为
@@ -147,7 +160,7 @@ npm run translate -- --key "your-deepl-api-key:fx" --lang ja
 如果你想只翻一部分语言，也可以显式指定：
 
 ```bash
-npm run translate -- --lang fr,es,ar
+pnpm translate -- --lang fr,es,ar
 ```
 
 注意：
@@ -174,10 +187,11 @@ npm run translate -- --lang fr,es,ar
 - 读取 `src/i18n/messages/zh.ts`
 - 用 TypeScript AST 安全解析 `export default` 对象
 - 递归翻译对象中的字符串字段
+- 对普通外语目标语言调用 DeepL
+- 对 `zh-tw` 调用 OpenCC 做简体转繁体
 - 保留数组、对象层级结构不变
 - 直接覆盖目标语言文件，如 `src/i18n/messages/ja.ts`
 - 切到 `ar` 时自动把页面设为 RTL
-- 识别 `browserAliases`，让 `zh-TW` / `zh-HK` 这类浏览器语言能命中正确 locale
 - 自动跳过纯 emoji、纯符号和常见品牌词
 
 脚本不会：
@@ -195,7 +209,7 @@ npm run translate -- --lang fr,es,ar
 ## 示例输出
 
 ```text
-🌐 DeepL 翻译脚本启动
+🌐 DeepL / OpenCC 翻译脚本启动
    源语言：中文 (zh.ts / ZH)
    目标语言：en, zh-tw, ja, ko, de, ru, fr, es, ar
 
@@ -204,7 +218,7 @@ npm run translate -- --lang fr,es,ar
 📝 正在翻译 → en (EN-US)...
    ✅ 已写入 src/i18n/messages/en.ts
 
-📝 正在翻译 → zh-tw (ZH-HANT)...
+📝 正在翻译 → zh-tw (OpenCC cn->tw)...
    ✅ 已写入 src/i18n/messages/zh-tw.ts
 
 📝 正在翻译 → ja (JA)...
@@ -238,6 +252,7 @@ npm run translate -- --lang fr,es,ar
 - 翻译失败的条目会保留中文原文，不会中断整个流程。
 - `src/i18n/messages/zh.ts` 需要保持为静态 `export default` 对象，不要引入运行时代码。
 - `zh` 当前是源语言，只负责提供母本文案，不参与 `--all` 或 `--lang zh` 翻译。
+- `zh-tw` 虽然保留了 `ZH-HANT` 作为语言元数据，但实际生成过程走的是 OpenCC，本地即可完成，不依赖 DeepL 返回繁体结果。
 - 如果新增的是带地区或脚本的语言，例如 `zh-tw`，记得在 `browserAliases` 里补上对应标签，确保浏览器自动识别和本地持久化都能命中正确语言。
 - 翻译完成后，建议人工快速检查一遍术语、品牌名和语气是否符合产品风格。
 
@@ -250,7 +265,7 @@ npm run translate -- --lang fr,es,ar
 2. 运行：
 
 ```bash
-npm run translate -- --lang <locale>
+pnpm translate -- --lang <locale>
 ```
 
 如果你只是新增可机翻语言，通常不需要再手动修改 `src/i18n/index.ts` 或 `src/components/NavBar.vue` 了。

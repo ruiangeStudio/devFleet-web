@@ -1,10 +1,11 @@
 /**
- * DeepL 自动翻译脚本
+ * DeepL / OpenCC 自动翻译脚本
  * 以 src/i18n/messages/zh.ts 为源语言，自动翻译并更新其他语言文件。
  *
  * 语言元数据统一来自 src/i18n/locales.ts：
  * - isSource = true 的语言提供源文案和 deeplSource
  * - deeplTarget 决定目标语言的 DeepL 代码
+ * - translationStrategy 可以把特定语言改走本地转换，而不是调用 DeepL
  * - manual = true 的语言不会被默认 --all 覆盖
  *
  * 这样做的好处是，像中文这种“源语言代码”和“目标语言代码”不同的场景
@@ -14,17 +15,18 @@
  * - 繁体中文目标语言：ZH-HANT
  *
  * 使用方法：
- *   npm run translate
- *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja
- *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de,ru,fr,es,ar,zh-tw
- *   npm run translate -- --key YOUR_DEEPL_API_KEY --all
+ *   pnpm translate
+ *   pnpm translate -- --key YOUR_DEEPL_API_KEY --lang ja
+ *   pnpm translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de,ru,fr,es,ar,zh-tw
+ *   pnpm translate -- --key YOUR_DEEPL_API_KEY --all
  *
  * 也可以设置环境变量替代 --key 参数：
  *   .env => DEEPL_API_KEY=your-key
- *   npm run translate
+ *   pnpm translate
  */
 
 import * as deepl from 'deepl-node'
+import * as OpenCC from 'opencc-js'
 import ts from 'typescript'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { fileURLToPath } from 'url'
@@ -38,6 +40,7 @@ const LOCALES_CONFIG_PATH = join(I18N_DIR, 'locales.ts')
 
 const ENV_FILES = ['.env']
 const LOCALE_DEFINITIONS = loadLocaleDefinitions()
+const LOCALE_DEFINITION_MAP = Object.fromEntries(LOCALE_DEFINITIONS.map(locale => [locale.code, locale]))
 const SOURCE_LOCALE_DEFINITION = LOCALE_DEFINITIONS.find(locale => locale.isSource)
 const SOURCE_LOCALE = SOURCE_LOCALE_DEFINITION?.code ?? 'zh'
 const SOURCE_LANG = SOURCE_LOCALE_DEFINITION?.deeplSource ?? SOURCE_LOCALE_DEFINITION?.deeplTarget ?? 'ZH'
@@ -59,6 +62,17 @@ const DEEPL_LANG_MAP = Object.fromEntries(
     .filter(locale => locale.deeplTarget)
     .map(locale => [locale.code, locale.deeplTarget]),
 )
+const LOCALE_TRANSLATION_STRATEGY_MAP = Object.fromEntries(
+  LOCALE_DEFINITIONS
+    .filter(locale => locale.translationStrategy)
+    .map(locale => [locale.code, locale.translationStrategy]),
+)
+const TRANSLATION_STRATEGY_LABELS = {
+  'opencc-cn-to-tw': 'OpenCC cn->tw',
+}
+const TEXT_TRANSFORMERS = {
+  'opencc-cn-to-tw': OpenCC.Converter({ from: 'cn', to: 'tw' }),
+}
 
 const SKIP_TRANSLATION_PATTERNS = [
   /^[©\d\s.,!?:;()\-_/\\]+$/,
@@ -126,13 +140,13 @@ function loadEnvFiles() {
 
 function printHelp() {
   console.log(`
-DeepL 自动翻译脚本
+DeepL / OpenCC 自动翻译脚本
 
 用法：
-  npm run translate
-  npm run translate -- --lang ja
-  npm run translate -- --lang ${AUTO_TRANSLATED_LOCALES.join(',')}
-  npm run translate -- --all
+  pnpm translate
+  pnpm translate -- --lang ja
+  pnpm translate -- --lang ${AUTO_TRANSLATED_LOCALES.join(',')}
+  pnpm translate -- --all
 
 参数：
   --key <DEEPL_API_KEY>  可选，未传时读取环境变量 DEEPL_API_KEY
@@ -144,6 +158,7 @@ DeepL 自动翻译脚本
   也支持项目根目录的 .env 文件
   不传参数时默认执行 --all
   --all 当前只会覆盖：${AUTO_TRANSLATED_LOCALES.join(', ')}
+  像 zh-tw 这类本地转换语言可不依赖 DeepL API Key
   若要只翻部分语言，请显式传入 --lang xx
 `)
 }
@@ -182,8 +197,8 @@ function resolveTargetLocales() {
       fail(`语言 ${locale} 是当前源语言，不需要再翻译回自己。`)
     }
 
-    if (!DEEPL_LANG_MAP[locale]) {
-      fail(`不支持的语言代码：${locale}\n   支持的语言：${Object.keys(DEEPL_LANG_MAP).join(', ')}`)
+    if (!LOCALE_DEFINITION_MAP[locale] || (!DEEPL_LANG_MAP[locale] && !LOCALE_TRANSLATION_STRATEGY_MAP[locale])) {
+      fail(`不支持的语言代码：${locale}\n   支持的语言：${AUTO_TRANSLATED_LOCALES.join(', ')}`)
     }
   }
 
@@ -191,9 +206,21 @@ function resolveTargetLocales() {
 }
 
 function shouldSkipTranslation(value) {
-  // 纯符号、纯 emoji 这类字符串没必要发给 DeepL，既避免报错也节省额度。
+  // 纯符号、纯 emoji 这类字符串没必要发给 DeepL / OpenCC，既避免报错也节省额度。
   if (SKIP_TRANSLATION_PATTERNS.some(pattern => pattern.test(value))) return true
   return !/[\p{L}\p{N}]/u.test(value)
+}
+
+function transformText(value, targetLocale) {
+  const strategy = LOCALE_TRANSLATION_STRATEGY_MAP[targetLocale]
+  if (!strategy) return null
+
+  const transformer = TEXT_TRANSFORMERS[strategy]
+  if (!transformer) {
+    throw new Error(`未实现的本地转换策略：${strategy}`)
+  }
+
+  return transformer(value)
 }
 
 // ===== 加载源文件 =====
@@ -282,10 +309,17 @@ function parseStaticExpression(expression, path) {
 }
 
 // ===== 递归翻译对象 =====
-async function translateObject(obj, translator, targetLang, path = '') {
+async function translateObject(obj, translator, targetLocale, targetLang, path = '') {
   if (typeof obj === 'string') {
     // 跳过不需要翻译的值（纯符号、数字、已是代码的内容）
     if (shouldSkipTranslation(obj)) return obj
+
+    const transformed = transformText(obj, targetLocale)
+    if (transformed !== null) return transformed
+
+    if (!translator || !targetLang) {
+      throw new Error(`语言 ${targetLocale} 缺少可用的翻译配置`)
+    }
 
     try {
       const result = await translator.translateText(obj, SOURCE_LANG, targetLang)
@@ -299,7 +333,7 @@ async function translateObject(obj, translator, targetLang, path = '') {
   if (Array.isArray(obj)) {
     const results = []
     for (let i = 0; i < obj.length; i++) {
-      results.push(await translateObject(obj[i], translator, targetLang, `${path}[${i}]`))
+      results.push(await translateObject(obj[i], translator, targetLocale, targetLang, `${path}[${i}]`))
     }
     return results
   }
@@ -307,7 +341,7 @@ async function translateObject(obj, translator, targetLang, path = '') {
   if (typeof obj === 'object' && obj !== null) {
     const result = {}
     for (const key of Object.keys(obj)) {
-      result[key] = await translateObject(obj[key], translator, targetLang, `${path}.${key}`)
+      result[key] = await translateObject(obj[key], translator, targetLocale, targetLang, `${path}.${key}`)
     }
     return result
   }
@@ -354,12 +388,13 @@ async function main() {
   const targetLocales = resolveTargetLocales()
   const source = loadSourceMessages()
   const apiKey = getArg('key') || process.env.DEEPL_API_KEY
+  const deepLTargetLocales = targetLocales.filter(locale => !LOCALE_TRANSLATION_STRATEGY_MAP[locale])
 
-  if (!apiKey) {
+  if (deepLTargetLocales.length > 0 && !apiKey) {
     fail('缺少 API Key！请用 --key 参数或 DEEPL_API_KEY 环境变量提供。')
   }
 
-  console.log(`\n🌐 DeepL 翻译脚本启动`)
+  console.log(`\n🌐 DeepL / OpenCC 翻译脚本启动`)
   console.log(`   源语言：${SOURCE_LABEL} (${SOURCE_LOCALE}.ts / ${SOURCE_LANG})`)
   console.log(`   目标语言：${targetLocales.join(', ')}\n`)
 
@@ -369,24 +404,32 @@ async function main() {
     }
   }
 
-  const translator = new deepl.Translator(apiKey)
+  let translator = null
 
-  // 验证 API Key 是否有效
-  try {
-    const usage = await translator.getUsage()
-    const used = usage.character?.count ?? 0
-    const limit = usage.character?.limit ?? 0
-    console.log(`✅ API Key 有效，本月已用字符：${used.toLocaleString()} / ${limit.toLocaleString()}\n`)
-  } catch (err) {
-    console.error(`❌ API Key 无效或网络错误：${err.message}`)
-    process.exit(1)
+  if (deepLTargetLocales.length > 0) {
+    translator = new deepl.Translator(apiKey)
+
+    // 只有确实要调用 DeepL 时才校验 API Key，像 zh-tw 这种本地转换不应该强依赖网络。
+    try {
+      const usage = await translator.getUsage()
+      const used = usage.character?.count ?? 0
+      const limit = usage.character?.limit ?? 0
+      console.log(`✅ API Key 有效，本月已用字符：${used.toLocaleString()} / ${limit.toLocaleString()}\n`)
+    } catch (err) {
+      console.error(`❌ API Key 无效或网络错误：${err.message}`)
+      process.exit(1)
+    }
+  } else {
+    console.log('ℹ️ 当前目标语言全部使用本地转换策略，无需调用 DeepL。\n')
   }
 
   for (const locale of targetLocales) {
     const deeplLang = DEEPL_LANG_MAP[locale]
-    console.log(`📝 正在翻译 → ${locale} (${deeplLang})...`)
+    const strategy = LOCALE_TRANSLATION_STRATEGY_MAP[locale]
+    const engineLabel = strategy ? TRANSLATION_STRATEGY_LABELS[strategy] ?? strategy : deeplLang
+    console.log(`📝 正在翻译 → ${locale} (${engineLabel})...`)
 
-    const translated = await translateObject(source, translator, deeplLang)
+    const translated = await translateObject(source, translator, locale, deeplLang)
 
     // 生成 .ts 文件内容
     const content = `export default ${serializeToTs(translated)}\n`

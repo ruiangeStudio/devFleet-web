@@ -41,7 +41,7 @@ Never Been More Efficient`,
       {
         icon: '💻',
         title: 'Editor Integration',
-        description: 'One-click project opening in VSCode / Cursor / WebStorm, automatic detection of system installed editors, support for setting default editor preferences.',
+        description: 'Open projects in VSCode / Cursor / WebStorm with one click, auto-detect system installed editors, support setting default editor preferences.',
       },
       {
         icon: '🎨',
