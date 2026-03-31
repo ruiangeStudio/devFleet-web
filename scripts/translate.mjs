@@ -1,15 +1,16 @@
 /**
  * DeepL 自动翻译脚本
- * 以 en.ts 为源语言，自动翻译并更新其他语言文件
+ * 以 zh.ts 为源语言，自动翻译并更新其他语言文件
  *
  * 使用方法：
+ *   npm run translate
  *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja
- *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de,ru
+ *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de,ru,fr,es,ar
  *   npm run translate -- --key YOUR_DEEPL_API_KEY --all
  *
  * 也可以设置环境变量替代 --key 参数：
  *   .env => DEEPL_API_KEY=your-key
- *   npm run translate -- --lang ja
+ *   npm run translate
  */
 
 import * as deepl from 'deepl-node'
@@ -21,26 +22,27 @@ import { dirname, join } from 'path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = join(__dirname, '..')
 const I18N_DIR = join(PROJECT_ROOT, 'src/i18n')
+const MESSAGES_DIR = join(I18N_DIR, 'messages')
+const LOCALES_CONFIG_PATH = join(I18N_DIR, 'locales.ts')
 
-const SOURCE_LOCALE = 'en'
-const SOURCE_LANG = 'EN'
-const HUMAN_MAINTAINED_LOCALES = new Set(['zh'])
 const ENV_FILES = ['.env']
+const LOCALE_DEFINITIONS = loadLocaleDefinitions()
+const SOURCE_LOCALE = LOCALE_DEFINITIONS.find(locale => locale.isSource)?.code ?? 'zh'
+const SOURCE_LANG = LOCALE_DEFINITIONS.find(locale => locale.code === SOURCE_LOCALE)?.deeplTarget ?? 'ZH-HANS'
+const HUMAN_MAINTAINED_LOCALES = new Set(
+  LOCALE_DEFINITIONS.filter(locale => locale.manual).map(locale => locale.code),
+)
 
 // 当前项目已接入的语言。--all 只会翻这些语言，避免生成前台不可达的死文件。
-const APP_ENABLED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de', 'ru']
+const APP_ENABLED_LOCALES = LOCALE_DEFINITIONS.map(locale => locale.code)
 
 // key: 我们项目中的 locale 标识符
 // value: DeepL API 的目标语言代码
-const DEEPL_LANG_MAP = {
-  zh: 'ZH',      // 中文（简体）
-  ja: 'JA',      // 日语
-  ko: 'KO',      // 韩语
-  de: 'DE',      // 德语
-  ru: 'RU',      // 俄语
-  fr: 'FR',      // 法语（备用，如果将来加）
-  es: 'ES',      // 西班牙语（备用）
-}
+const DEEPL_LANG_MAP = Object.fromEntries(
+  LOCALE_DEFINITIONS
+    .filter(locale => locale.deeplTarget)
+    .map(locale => [locale.code, locale.deeplTarget]),
+)
 
 const SKIP_TRANSLATION_PATTERNS = [
   /^[©\d\s.,!?:;()\-_/\\]+$/,
@@ -55,6 +57,24 @@ const args = process.argv.slice(2)
 function getArg(name) {
   const idx = args.indexOf(`--${name}`)
   return idx !== -1 ? args[idx + 1] : null
+}
+
+function loadLocaleDefinitions() {
+  const raw = readFileSync(LOCALES_CONFIG_PATH, 'utf-8')
+  const sourceFile = ts.createSourceFile(LOCALES_CONFIG_PATH, raw, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+  const exportAssignment = sourceFile.statements.find(statement => ts.isExportAssignment(statement))
+
+  if (!exportAssignment) {
+    throw new Error(`未在 ${LOCALES_CONFIG_PATH} 中找到 export default`)
+  }
+
+  const localeDefinitions = parseStaticExpression(exportAssignment.expression, 'locale definitions')
+
+  if (!Array.isArray(localeDefinitions) || localeDefinitions.length === 0) {
+    throw new Error('语言配置不能为空')
+  }
+
+  return localeDefinitions
 }
 
 function loadEnvFiles() {
@@ -92,20 +112,22 @@ function printHelp() {
 DeepL 自动翻译脚本
 
 用法：
+  npm run translate
   npm run translate -- --lang ja
-  npm run translate -- --lang ja,ko,de,ru
+  npm run translate -- --lang ja,ko,de,ru,fr,es,ar
   npm run translate -- --all
 
 参数：
   --key <DEEPL_API_KEY>  可选，未传时读取环境变量 DEEPL_API_KEY
   --lang <codes>         指定目标语言，多个用逗号分隔
-  --all                  翻译当前项目已启用的所有机翻语言
+  --all                  显式翻译当前项目已启用的所有机翻语言
   --help                 查看帮助
 
 说明：
   也支持项目根目录的 .env 文件
+  不传参数时默认执行 --all
   --all 当前只会覆盖：${APP_ENABLED_LOCALES.filter(locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale)).join(', ')}
-  若要生成未来语言（如 fr / es），请显式传入 --lang fr
+  若要只翻部分语言，请显式传入 --lang xx
 `)
 }
 
@@ -119,17 +141,12 @@ function normalizeLocale(locale) {
 }
 
 function resolveTargetLocales() {
-  const targetAll = args.includes('--all')
   const langArg = getArg('lang')
 
-  if (targetAll) {
+  if (!langArg) {
     return APP_ENABLED_LOCALES.filter(
       locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale),
     )
-  }
-
-  if (!langArg) {
-    fail('请指定目标语言：--lang ja 或 --all')
   }
 
   const locales = Array.from(
@@ -156,7 +173,7 @@ function resolveTargetLocales() {
 
 // ===== 加载源文件 =====
 function loadSourceMessages() {
-  const sourcePath = join(I18N_DIR, `${SOURCE_LOCALE}.ts`)
+  const sourcePath = join(MESSAGES_DIR, `${SOURCE_LOCALE}.ts`)
   const raw = readFileSync(sourcePath, 'utf-8')
   const sourceFile = ts.createSourceFile(sourcePath, raw, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
   const exportAssignment = sourceFile.statements.find(statement => ts.isExportAssignment(statement))
@@ -317,7 +334,7 @@ async function main() {
   }
 
   console.log(`\n🌐 DeepL 翻译脚本启动`)
-  console.log(`   源语言：English (${SOURCE_LOCALE}.ts)`)
+  console.log(`   源语言：Chinese (${SOURCE_LOCALE}.ts)`)
   console.log(`   目标语言：${targetLocales.join(', ')}\n`)
 
   for (const locale of targetLocales) {
@@ -347,10 +364,10 @@ async function main() {
 
     // 生成 .ts 文件内容
     const content = `export default ${serializeToTs(translated)}\n`
-    const outPath = join(I18N_DIR, `${locale}.ts`)
+    const outPath = join(MESSAGES_DIR, `${locale}.ts`)
 
     writeFileSync(outPath, content, 'utf-8')
-    console.log(`   ✅ 已写入 src/i18n/${locale}.ts\n`)
+    console.log(`   ✅ 已写入 src/i18n/messages/${locale}.ts\n`)
   }
 
   console.log('🎉 翻译完成！')

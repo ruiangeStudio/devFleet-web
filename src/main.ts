@@ -21,7 +21,7 @@ app.directive('click-outside', {
 })
 
 watchEffect(() => {
-  syncDocumentLocale(i18n.global.locale.value as Locale)
+  syncDocumentLocale((i18n.global.locale as unknown as { value: Locale }).value)
 })
 
 app.use(i18n).mount('#app')

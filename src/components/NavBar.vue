@@ -3,7 +3,7 @@ import { ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNavScroll } from '../composables/useNavScroll'
 import { useLocale } from '../composables/useLocale'
-import type { Locale } from '../i18n'
+import { LOCALE_OPTIONS, type Locale } from '../i18n'
 
 const navRef = useTemplateRef<HTMLElement>('navRef')
 useNavScroll(navRef)
@@ -11,14 +11,11 @@ useNavScroll(navRef)
 const { t } = useI18n()
 const { currentLocale, setLocale } = useLocale()
 
-const LOCALE_OPTIONS: { value: Locale; label: string; name: string }[] = [
-  { value: 'zh', label: '中文', name: '中文' },
-  { value: 'en', label: 'English', name: 'EN' },
-  { value: 'ja', label: '日本語', name: 'JA' },
-  { value: 'ko', label: '한국어', name: 'KO' },
-  { value: 'de', label: 'Deutsch', name: 'DE' },
-  { value: 'ru', label: 'Русский', name: 'RU' },
-]
+const localeOptions: { value: Locale; label: string; name: string }[] = LOCALE_OPTIONS.map(locale => ({
+  value: locale.code,
+  label: locale.label,
+  name: locale.name,
+}))
 
 const dropdownOpen = ref(false)
 
@@ -58,7 +55,7 @@ function closeDropdown() {
             <circle cx="12" cy="12" r="10"/>
             <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
           </svg>
-          <span>{{ LOCALE_OPTIONS.find(o => o.value === currentLocale)?.name }}</span>
+          <span>{{ localeOptions.find(o => o.value === currentLocale)?.name }}</span>
           <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
@@ -67,7 +64,7 @@ function closeDropdown() {
         <Transition name="dropdown">
           <div v-if="dropdownOpen" class="lang-menu">
             <button
-              v-for="opt in LOCALE_OPTIONS"
+              v-for="opt in localeOptions"
               :key="opt.value"
               class="lang-option"
               :class="{ active: opt.value === currentLocale }"

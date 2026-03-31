@@ -1,27 +1,39 @@
 import { createI18n } from 'vue-i18n'
-import zh from './zh'
-import en from './en'
-import ja from './ja'
-import ko from './ko'
-import de from './de'
-import ru from './ru'
+import localeDefinitions from './locales'
 
 export const LOCALE_STORAGE_KEY = 'devfleet-locale'
-export const DEFAULT_LOCALE = 'zh'
-export const SUPPORTED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de', 'ru'] as const
+export type Locale = (typeof localeDefinitions)[number]['code']
 
-export type Locale = (typeof SUPPORTED_LOCALES)[number]
+export const DEFAULT_LOCALE =
+  (localeDefinitions.find(locale => locale.isDefault)?.code as Locale | undefined) ?? 'zh'
+export const SOURCE_LOCALE =
+  (localeDefinitions.find(locale => locale.isSource)?.code as Locale | undefined) ?? DEFAULT_LOCALE
+export const SUPPORTED_LOCALES = localeDefinitions.map(locale => locale.code) as Locale[]
+export const LOCALE_OPTIONS = localeDefinitions.map(({ code, label, name }) => ({ code, label, name }))
 
-const messages = {
-  zh,
-  en,
-  ja,
-  ko,
-  de,
-  ru,
+const localeModules = import.meta.glob('./messages/*.ts', { eager: true, import: 'default' }) as Record<
+  string,
+  Record<string, unknown>
+>
+const sourceMessages = localeModules[`./messages/${SOURCE_LOCALE}.ts`]
+
+if (!sourceMessages) {
+  throw new Error(`Missing source locale file: messages/${SOURCE_LOCALE}.ts`)
 }
 
+const messages = Object.fromEntries(
+  localeDefinitions.map(locale => [
+    locale.code,
+    localeModules[`./messages/${locale.code}.ts`] ?? sourceMessages,
+  ]),
+) as Record<Locale, any>
+
 const localeSet = new Set<Locale>(SUPPORTED_LOCALES)
+const rtlLocaleSet = new Set<Locale>(
+  localeDefinitions
+    .filter(locale => locale.dir === 'rtl')
+    .map(locale => locale.code as Locale),
+)
 
 function normalizeLocale(value?: string | null): Locale | null {
   if (!value) return null
@@ -43,6 +55,7 @@ export function persistLocale(locale: Locale) {
 export function syncDocumentLocale(locale: Locale) {
   if (typeof document === 'undefined') return
   document.documentElement.lang = locale
+  document.documentElement.dir = rtlLocaleSet.has(locale) ? 'rtl' : 'ltr'
 }
 
 export function resolvePreferredLocale(): Locale {
@@ -69,5 +82,5 @@ export const i18n = createI18n({
   legacy: false,
   locale: initialLocale,
   fallbackLocale: DEFAULT_LOCALE,
-  messages,
+  messages: messages as any,
 })
