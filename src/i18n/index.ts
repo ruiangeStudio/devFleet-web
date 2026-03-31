@@ -4,10 +4,11 @@ import en from './en'
 import ja from './ja'
 import ko from './ko'
 import de from './de'
+import ru from './ru'
 
 export const LOCALE_STORAGE_KEY = 'devfleet-locale'
 export const DEFAULT_LOCALE = 'zh'
-export const SUPPORTED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de'] as const
+export const SUPPORTED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de', 'ru'] as const
 
 export type Locale = (typeof SUPPORTED_LOCALES)[number]
 
@@ -17,6 +18,7 @@ const messages = {
   ja,
   ko,
   de,
+  ru,
 }
 
 const localeSet = new Set<Locale>(SUPPORTED_LOCALES)

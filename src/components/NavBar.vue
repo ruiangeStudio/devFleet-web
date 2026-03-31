@@ -17,6 +17,7 @@ const LOCALE_OPTIONS: { value: Locale; label: string; name: string }[] = [
   { value: 'ja', label: '日本語', name: 'JA' },
   { value: 'ko', label: '한국어', name: 'KO' },
   { value: 'de', label: 'Deutsch', name: 'DE' },
+  { value: 'ru', label: 'Русский', name: 'RU' },
 ]
 
 const dropdownOpen = ref(false)

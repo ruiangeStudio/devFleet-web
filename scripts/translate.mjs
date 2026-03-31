@@ -4,7 +4,7 @@
  *
  * 使用方法：
  *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja
- *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de
+ *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de,ru
  *   npm run translate -- --key YOUR_DEEPL_API_KEY --all
  *
  * 也可以设置环境变量替代 --key 参数：
@@ -28,7 +28,7 @@ const HUMAN_MAINTAINED_LOCALES = new Set(['zh'])
 const ENV_FILES = ['.env']
 
 // 当前项目已接入的语言。--all 只会翻这些语言，避免生成前台不可达的死文件。
-const APP_ENABLED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de']
+const APP_ENABLED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de', 'ru']
 
 // key: 我们项目中的 locale 标识符
 // value: DeepL API 的目标语言代码
@@ -37,6 +37,7 @@ const DEEPL_LANG_MAP = {
   ja: 'JA',      // 日语
   ko: 'KO',      // 韩语
   de: 'DE',      // 德语
+  ru: 'RU',      // 俄语
   fr: 'FR',      // 法语（备用，如果将来加）
   es: 'ES',      // 西班牙语（备用）
 }
@@ -92,7 +93,7 @@ DeepL 自动翻译脚本
 
 用法：
   npm run translate -- --lang ja
-  npm run translate -- --lang ja,ko,de
+  npm run translate -- --lang ja,ko,de,ru
   npm run translate -- --all
 
 参数：

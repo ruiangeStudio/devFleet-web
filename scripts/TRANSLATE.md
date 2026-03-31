@@ -50,7 +50,7 @@ npm run translate -- --lang ja
 翻译多个语言：
 
 ```bash
-npm run translate -- --lang ja,ko,de
+npm run translate -- --lang ja,ko,de,ru
 ```
 
 翻译当前项目已启用的所有机翻语言：
@@ -79,6 +79,7 @@ npm run translate -- --key "your-deepl-api-key:fx" --lang ja
 - `ja`
 - `ko`
 - `de`
+- `ru`
 
 不会覆盖：
 - `en`
@@ -102,6 +103,7 @@ npm run translate -- --lang fr,es
 | `ja` | 日语 | `JA` |
 | `ko` | 韩语 | `KO` |
 | `de` | 德语 | `DE` |
+| `ru` | 俄语 | `RU` |
 | `fr` | 法语 | `FR` |
 | `es` | 西班牙语 | `ES` |
 | `zh` | 中文 | `ZH` |
@@ -133,7 +135,7 @@ npm run translate -- --lang fr,es
 ```text
 🌐 DeepL 翻译脚本启动
    源语言：English (en.ts)
-   目标语言：ja, ko, de
+   目标语言：ja, ko, de, ru
 
 ✅ API Key 有效，本月已用字符：1,234 / 500,000
 
@@ -145,6 +147,9 @@ npm run translate -- --lang fr,es
 
 📝 正在翻译 → de (DE)...
    ✅ 已写入 src/i18n/de.ts
+
+📝 正在翻译 → ru (RU)...
+   ✅ 已写入 src/i18n/ru.ts
 
 🎉 翻译完成！
 💡 建议：机翻结果请人工检查一遍，尤其是专业术语和品牌名称。
