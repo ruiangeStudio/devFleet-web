@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview",
+    "preview": "pnpm run build && wrangler dev",
     "translate": "node scripts/translate.mjs",
-    "deepl:status": "node scripts/deepl-status.mjs"
+    "deepl:status": "node scripts/deepl-status.mjs",
+    "deploy": "pnpm run build && wrangler deploy"
   },
   "dependencies": {
     "@microsoft/clarity": "^1.0.2",
@@ -16,6 +17,7 @@
     "vue-i18n": "^10.0.8"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.30.2",
     "@types/node": "^24.12.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.0",
@@ -23,6 +25,7 @@
     "opencc-js": "^1.0.5",
     "typescript": "~5.9.3",
     "vite": "^8.0.3",
-    "vue-tsc": "^3.2.5"
+    "vue-tsc": "^3.2.5",
+    "wrangler": "^4.78.0"
   }
 }
