@@ -8,22 +8,24 @@
  *   npm run translate -- --key YOUR_DEEPL_API_KEY --all
  *
  * 也可以设置环境变量替代 --key 参数：
- *   $env:DEEPL_API_KEY="your-key"
+ *   .env => DEEPL_API_KEY=your-key
  *   npm run translate -- --lang ja
  */
 
 import * as deepl from 'deepl-node'
 import ts from 'typescript'
-import { readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const I18N_DIR = join(__dirname, '../src/i18n')
+const PROJECT_ROOT = join(__dirname, '..')
+const I18N_DIR = join(PROJECT_ROOT, 'src/i18n')
 
 const SOURCE_LOCALE = 'en'
 const SOURCE_LANG = 'EN'
 const HUMAN_MAINTAINED_LOCALES = new Set(['zh'])
+const ENV_FILES = ['.env']
 
 // 当前项目已接入的语言。--all 只会翻这些语言，避免生成前台不可达的死文件。
 const APP_ENABLED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de']
@@ -44,12 +46,44 @@ const SKIP_TRANSLATION_PATTERNS = [
   /^(Windows|macOS|Linux|GitHub|npm|yarn|pnpm|bun|nvmd|nvs|nvm|VSCode|Cursor|WebStorm|Tauri)$/,
 ]
 
+loadEnvFiles()
+
 // ===== 解析命令行参数 =====
 const args = process.argv.slice(2)
 
 function getArg(name) {
   const idx = args.indexOf(`--${name}`)
   return idx !== -1 ? args[idx + 1] : null
+}
+
+function loadEnvFiles() {
+  for (const file of ENV_FILES) {
+    const envPath = join(PROJECT_ROOT, file)
+    if (!existsSync(envPath)) continue
+
+    const lines = readFileSync(envPath, 'utf-8').split(/\r?\n/)
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+
+      const separatorIndex = trimmed.indexOf('=')
+      if (separatorIndex === -1) continue
+
+      const key = trimmed.slice(0, separatorIndex).trim()
+      let value = trimmed.slice(separatorIndex + 1).trim()
+
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1)
+      }
+
+      if (key && !(key in process.env)) {
+        process.env[key] = value
+      }
+    }
+  }
 }
 
 function printHelp() {
@@ -68,6 +102,7 @@ DeepL 自动翻译脚本
   --help                 查看帮助
 
 说明：
+  也支持项目根目录的 .env 文件
   --all 当前只会覆盖：${APP_ENABLED_LOCALES.filter(locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale)).join(', ')}
   若要生成未来语言（如 fr / es），请显式传入 --lang fr
 `)

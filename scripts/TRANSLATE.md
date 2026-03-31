@@ -1,102 +1,136 @@
 # 🌐 DeepL 自动翻译使用指南
 
-基于 `deepl-node` SDK，以 `en.ts` 为源语言，自动翻译并写入其他语言文件。
+本项目内置了一个基于 `deepl-node` 的翻译脚本，会以 `src/i18n/en.ts` 为源语言，自动翻译并写入其他语言文件。
 
----
+## 前提
 
-## 第一步：注册 DeepL Free 账号
+1. 注册 [DeepL API](https://www.deepl.com/pro-api) 账号
+2. 获取 API Key
+3. 在项目根目录安装依赖：
 
-1. 打开 https://www.deepl.com/pro-api
-2. 点击 **Sign up for free**，选择 **Free 套餐**（无需绑卡）
-3. 注册并登录后，进入 **Account → Authentication Key**
-4. 复制你的 API Key，格式类似：
-
-   ```
-   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx
-   ```
-
-   > ⚠️ Free 版 Key 末尾一定有 `:fx`，如果没有说明是付费版 Key，两者都能用。
-
-**免费额度**：每月 **50 万字符**，本项目全量翻译一次约消耗 2000~3000 字符，完全够用。
-
----
-
-## 第二步：安装项目依赖
-
-```powershell
+```bash
 npm install
 ```
 
----
+## 推荐用法：`.env`
 
-## 第三步：执行翻译
+项目已经支持从根目录 `.env` 读取 `DEEPL_API_KEY`。
 
-### 翻译单个语言
+1. 复制示例文件：
 
-```powershell
-npm run translate -- --key "你的KEY:fx" --lang ja
+```bash
+cp .env.example .env
 ```
 
-### 翻译多个语言（逗号分隔）
+2. 填入你自己的 key：
 
-```powershell
-npm run translate -- --key "你的KEY:fx" --lang ja,ko,de
+```dotenv
+DEEPL_API_KEY=your-deepl-api-key:fx
 ```
 
-### 翻译所有语言（除中文外）
+3. 直接执行翻译：
 
-`--all` 只会翻译当前项目已经启用的机翻语言，也就是 `ja, ko, de`。
-
-```powershell
-npm run translate -- --key "你的KEY:fx" --all
+```bash
+npm run translate -- --lang ja
 ```
 
-如果你要提前生成未来语言文件，比如法语或西班牙语，需要显式指定：
+说明：
+- `.env` 会被 Git 忽略，不会提交到仓库。
+- `.env.example` 会保留在仓库里，供团队成员参考。
+- 如果你不想用 `.env`，也可以继续手动传 `--key`。
 
-```powershell
-npm run translate -- --key "你的KEY:fx" --lang fr,es
+## 常用命令
+
+翻译单个语言：
+
+```bash
+npm run translate -- --lang ja
 ```
 
----
+翻译多个语言：
 
-## 推荐：用环境变量保存 Key，避免每次输入
-
-**PowerShell（当前会话）：**
-```powershell
-$env:DEEPL_API_KEY = "你的KEY:fx"
+```bash
 npm run translate -- --lang ja,ko,de
 ```
 
-**PowerShell（永久保存，重启后依然有效）：**
-```powershell
-[System.Environment]::SetEnvironmentVariable("DEEPL_API_KEY", "你的KEY:fx", "User")
-```
-设置后重新打开终端，直接运行：
-```powershell
-npm run translate -- --lang ja,ko,de
+翻译当前项目已启用的所有机翻语言：
+
+```bash
+npm run translate -- --all
 ```
 
----
+查看帮助：
 
-## 支持的语言代码
-
-| 代码 | 语言     | DeepL 代码 |
-|------|----------|------------|
-| `ja` | 日语     | `JA`       |
-| `ko` | 韩语     | `KO`       |
-| `de` | 德语     | `DE`       |
-| `fr` | 法语     | `FR`       |
-| `es` | 西班牙语 | `ES`       |
-| `zh` | 中文     | `ZH`       |
-
-> 💡 中文（`zh`）建议手动维护，机翻中文质量参差不齐。
-> 💡 `fr` / `es` 可以生成文件，但默认不会被 `--all` 覆盖，因为它们还不是当前站点的已启用语言。
-
----
-
-## 脚本执行效果示例
-
+```bash
+npm run translate -- --help
 ```
+
+如果你想显式覆盖环境变量，也可以这样写：
+
+```bash
+npm run translate -- --key "your-deepl-api-key:fx" --lang ja
+```
+
+## `--all` 的行为
+
+`--all` 不会翻所有 DeepL 支持语言，而是只翻当前项目已经启用、且允许机翻覆盖的语言。
+
+当前会覆盖：
+- `ja`
+- `ko`
+- `de`
+
+不会覆盖：
+- `en`
+  因为它是源语言
+- `zh`
+  因为当前约定中文手动维护
+
+如果你想提前生成未来语言文件，比如法语或西班牙语，需要显式指定：
+
+```bash
+npm run translate -- --lang fr,es
+```
+
+注意：
+- 生成 `fr.ts` / `es.ts` 后，还需要手动把这些语言接入项目，前台才会真正可用。
+
+## 当前支持的语言代码
+
+| locale | 语言 | DeepL 目标语言代码 |
+| --- | --- | --- |
+| `ja` | 日语 | `JA` |
+| `ko` | 韩语 | `KO` |
+| `de` | 德语 | `DE` |
+| `fr` | 法语 | `FR` |
+| `es` | 西班牙语 | `ES` |
+| `zh` | 中文 | `ZH` |
+
+## 脚本做了什么
+
+脚本会：
+- 读取 `src/i18n/en.ts`
+- 用 TypeScript AST 安全解析 `export default` 对象
+- 递归翻译对象中的字符串字段
+- 保留数组、对象层级结构不变
+- 直接覆盖目标语言文件，如 `src/i18n/ja.ts`
+
+脚本不会：
+- 执行 `en.ts` 中的源码
+- 自动把新语言注册到 `src/i18n/index.ts`
+- 自动把新语言加到导航语言切换列表
+
+## 哪些内容会跳过翻译
+
+以下内容默认会被保留：
+- 纯符号、纯数字、纯标点类内容
+- 常见品牌或工具名，如 `Windows`、`macOS`、`GitHub`、`npm`、`VSCode`、`Cursor`、`WebStorm`、`Tauri`
+
+如果后面你有新的品牌词要保留，可以去改 `scripts/translate.mjs` 里的 `SKIP_TRANSLATION_PATTERNS`。
+
+## 示例输出
+
+```text
 🌐 DeepL 翻译脚本启动
    源语言：English (en.ts)
    目标语言：ja, ko, de
@@ -116,23 +150,20 @@ npm run translate -- --lang ja,ko,de
 💡 建议：机翻结果请人工检查一遍，尤其是专业术语和品牌名称。
 ```
 
----
-
 ## 注意事项
 
-- 脚本会**直接覆盖**目标语言文件，执行前建议 `git commit` 保存当前状态
-- 品牌名（`Windows`、`macOS`、`GitHub`、`VSCode` 等）已设为**跳过翻译**，不会被改动
-- 翻译失败的条目会**保留原文**，不会中断整个流程
-- 脚本现在会用 TypeScript AST 安全读取 `en.ts`，不再通过 `new Function` 执行源码
-- 翻译完成后建议人工快速过一遍，重点检查：功能描述、专业术语
+- 脚本会直接覆盖目标语言文件，执行前建议先提交或备份当前修改。
+- 翻译失败的条目会保留英文原文，不会中断整个流程。
+- `src/i18n/en.ts` 需要保持为静态 `export default` 对象，不要引入运行时代码。
+- 翻译完成后，建议人工快速检查一遍术语、品牌名和语气是否符合产品风格。
 
----
+## 新增语言后的项目接入
 
-## 添加新语言到项目
+如果你新增了一个当前项目还没启用的语言文件，还需要继续补两处：
 
-翻译完成后，还需要在代码里注册新语言：
+1. `src/i18n/index.ts`
+   把语言文件导入并注册到 `messages`
+2. `src/components/NavBar.vue`
+   把语言选项加到 `LOCALE_OPTIONS`
 
-1. **`src/i18n/index.ts`** — 导入新语言文件并加入 `messages`，扩展 `Locale` 类型
-2. **`src/components/NavBar.vue`** — 在 `LOCALE_OPTIONS` 数组里加一条记录
-
-参考已有的 `ko`、`de` 的写法即可。
+这样前台语言切换里才会真正出现这个语言。
