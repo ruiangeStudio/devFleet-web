@@ -1,11 +1,22 @@
 /**
  * DeepL 自动翻译脚本
- * 以 zh.ts 为源语言，自动翻译并更新其他语言文件
+ * 以 src/i18n/messages/zh.ts 为源语言，自动翻译并更新其他语言文件。
+ *
+ * 语言元数据统一来自 src/i18n/locales.ts：
+ * - isSource = true 的语言提供源文案和 deeplSource
+ * - deeplTarget 决定目标语言的 DeepL 代码
+ * - manual = true 的语言不会被默认 --all 覆盖
+ *
+ * 这样做的好处是，像中文这种“源语言代码”和“目标语言代码”不同的场景
+ * 也能明确区分开来：
+ * - 简体中文源语言：ZH
+ * - 简体中文目标语言：ZH-HANS
+ * - 繁体中文目标语言：ZH-HANT
  *
  * 使用方法：
  *   npm run translate
  *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja
- *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de,ru,fr,es,ar
+ *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de,ru,fr,es,ar,zh-tw
  *   npm run translate -- --key YOUR_DEEPL_API_KEY --all
  *
  * 也可以设置环境变量替代 --key 参数：
@@ -37,6 +48,9 @@ const HUMAN_MAINTAINED_LOCALES = new Set(
 
 // 当前项目已接入的语言。--all 只会翻这些语言，避免生成前台不可达的死文件。
 const APP_ENABLED_LOCALES = LOCALE_DEFINITIONS.map(locale => locale.code)
+const AUTO_TRANSLATED_LOCALES = APP_ENABLED_LOCALES.filter(
+  locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale),
+)
 
 // key: 我们项目中的 locale 标识符
 // value: DeepL API 的目标语言代码
@@ -76,6 +90,7 @@ function loadLocaleDefinitions() {
     throw new Error('语言配置不能为空')
   }
 
+  // 这里刻意只解析静态 export default，避免执行仓库里的 TS/JS 代码。
   return localeDefinitions
 }
 
@@ -116,7 +131,7 @@ DeepL 自动翻译脚本
 用法：
   npm run translate
   npm run translate -- --lang ja
-  npm run translate -- --lang ja,ko,de,ru,fr,es,ar
+  npm run translate -- --lang ${AUTO_TRANSLATED_LOCALES.join(',')}
   npm run translate -- --all
 
 参数：
@@ -128,7 +143,7 @@ DeepL 自动翻译脚本
 说明：
   也支持项目根目录的 .env 文件
   不传参数时默认执行 --all
-  --all 当前只会覆盖：${APP_ENABLED_LOCALES.filter(locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale)).join(', ')}
+  --all 当前只会覆盖：${AUTO_TRANSLATED_LOCALES.join(', ')}
   若要只翻部分语言，请显式传入 --lang xx
 `)
 }
@@ -146,9 +161,7 @@ function resolveTargetLocales() {
   const langArg = getArg('lang')
 
   if (!langArg) {
-    return APP_ENABLED_LOCALES.filter(
-      locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale),
-    )
+    return AUTO_TRANSLATED_LOCALES
   }
 
   const locales = Array.from(
@@ -178,6 +191,7 @@ function resolveTargetLocales() {
 }
 
 function shouldSkipTranslation(value) {
+  // 纯符号、纯 emoji 这类字符串没必要发给 DeepL，既避免报错也节省额度。
   if (SKIP_TRANSLATION_PATTERNS.some(pattern => pattern.test(value))) return true
   return !/[\p{L}\p{N}]/u.test(value)
 }
@@ -193,6 +207,7 @@ function loadSourceMessages() {
     throw new Error(`未在 ${sourcePath} 中找到 export default`)
   }
 
+  // 源语言文件同样只允许静态对象，这样翻译脚本可以稳定递归整个文案树。
   return parseStaticExpression(exportAssignment.expression, 'default export')
 }
 

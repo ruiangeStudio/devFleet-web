@@ -25,6 +25,29 @@
 
 在翻译文件还没生成之前，页面会先回退使用中文文案，不会直接因为缺文件而报错。
 
+## `locales.ts` 字段说明
+
+每个语言项建议关注这些字段：
+
+- `code`
+  项目内部 locale 标识，也是 `src/i18n/messages/<code>.ts` 的文件名
+- `label` / `name`
+  前台语言菜单展示用文案
+- `deeplSource`
+  只有源语言需要，用来告诉 DeepL “原文是什么语言”
+- `deeplTarget`
+  目标语言对应的 DeepL 代码
+- `manual`
+  为 `true` 时，不参与默认 `--all` 覆盖
+- `browserAliases`
+  可选，用于把浏览器返回的脚本/区域语言标签映射到当前 locale
+
+例如繁体中文可以用：
+
+- `code: 'zh-tw'`
+- `deeplTarget: 'ZH-HANT'`
+- `browserAliases: ['zh-hant', 'zh-hk', 'zh-mo']`
+
 ## 前提
 
 1. 注册 [DeepL API](https://www.deepl.com/pro-api) 账号
@@ -79,7 +102,7 @@ npm run translate -- --lang ja
 翻译多个语言：
 
 ```bash
-npm run translate -- --lang ja,ko,de,ru,fr,es,ar
+npm run translate -- --lang ja,ko,de,ru,fr,es,ar,zh-tw
 ```
 
 显式翻译当前项目已启用的所有机翻语言：
@@ -108,6 +131,7 @@ npm run translate -- --key "your-deepl-api-key:fx" --lang ja
 
 当前会覆盖：
 - `en`
+- `zh-tw`
 - `ja`
 - `ko`
 - `de`
@@ -134,6 +158,7 @@ npm run translate -- --lang fr,es,ar
 | locale | 语言 | DeepL 目标语言代码 |
 | --- | --- | --- |
 | `en` | 英语 | `EN-US` |
+| `zh-tw` | 繁体中文 | `ZH-HANT` |
 | `ja` | 日语 | `JA` |
 | `ko` | 韩语 | `KO` |
 | `de` | 德语 | `DE` |
@@ -152,12 +177,12 @@ npm run translate -- --lang fr,es,ar
 - 保留数组、对象层级结构不变
 - 直接覆盖目标语言文件，如 `src/i18n/messages/ja.ts`
 - 切到 `ar` 时自动把页面设为 RTL
+- 识别 `browserAliases`，让 `zh-TW` / `zh-HK` 这类浏览器语言能命中正确 locale
 - 自动跳过纯 emoji、纯符号和常见品牌词
 
 脚本不会：
 - 执行 `zh.ts` 中的源码
-- 自动把新语言注册到 `src/i18n/index.ts`
-- 自动把新语言加到导航语言切换列表
+- 自动修改 `src/i18n/locales.ts`
 
 ## 哪些内容会跳过翻译
 
@@ -172,12 +197,15 @@ npm run translate -- --lang fr,es,ar
 ```text
 🌐 DeepL 翻译脚本启动
    源语言：中文 (zh.ts / ZH)
-   目标语言：en, ja, ko, de, ru, fr, es, ar
+   目标语言：en, zh-tw, ja, ko, de, ru, fr, es, ar
 
 ✅ API Key 有效，本月已用字符：1,234 / 500,000
 
 📝 正在翻译 → en (EN-US)...
    ✅ 已写入 src/i18n/messages/en.ts
+
+📝 正在翻译 → zh-tw (ZH-HANT)...
+   ✅ 已写入 src/i18n/messages/zh-tw.ts
 
 📝 正在翻译 → ja (JA)...
    ✅ 已写入 src/i18n/messages/ja.ts
@@ -210,6 +238,7 @@ npm run translate -- --lang fr,es,ar
 - 翻译失败的条目会保留中文原文，不会中断整个流程。
 - `src/i18n/messages/zh.ts` 需要保持为静态 `export default` 对象，不要引入运行时代码。
 - `zh` 当前是源语言，只负责提供母本文案，不参与 `--all` 或 `--lang zh` 翻译。
+- 如果新增的是带地区或脚本的语言，例如 `zh-tw`，记得在 `browserAliases` 里补上对应标签，确保浏览器自动识别和本地持久化都能命中正确语言。
 - 翻译完成后，建议人工快速检查一遍术语、品牌名和语气是否符合产品风格。
 
 ## 新增语言后的项目接入
@@ -225,3 +254,4 @@ npm run translate -- --lang <locale>
 ```
 
 如果你只是新增可机翻语言，通常不需要再手动修改 `src/i18n/index.ts` 或 `src/components/NavBar.vue` 了。
+只有像 `zh-tw` 这种带脚本/区域含义的 locale，才建议额外补 `browserAliases`，让浏览器语言匹配更准确。

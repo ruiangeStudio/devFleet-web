@@ -11,6 +11,7 @@ export const SOURCE_LOCALE =
 export const SUPPORTED_LOCALES = localeDefinitions.map(locale => locale.code) as Locale[]
 export const LOCALE_OPTIONS = localeDefinitions.map(({ code, label, name }) => ({ code, label, name }))
 
+// 所有 messages 文件都放在 i18n/messages 下，文件名必须与 locales.ts 里的 code 对齐。
 const localeModules = import.meta.glob('./messages/*.ts', { eager: true, import: 'default' }) as Record<
   string,
   Record<string, unknown>
@@ -34,12 +35,31 @@ const rtlLocaleSet = new Set<Locale>(
     .filter(locale => locale.dir === 'rtl')
     .map(locale => locale.code as Locale),
 )
+const localeAliasMap = new Map<string, Locale>()
+
+// 运行时会优先按完整 locale 匹配，再退回基础语言。
+// 这样既能支持常见的 en-US -> en，也能支持 zh-TW / zh-HK -> zh-tw。
+for (const locale of localeDefinitions) {
+  localeAliasMap.set(locale.code.toLowerCase(), locale.code as Locale)
+
+  if ('browserAliases' in locale) {
+    for (const alias of locale.browserAliases) {
+      localeAliasMap.set(alias.toLowerCase(), locale.code as Locale)
+    }
+  }
+}
 
 function normalizeLocale(value?: string | null): Locale | null {
   if (!value) return null
 
-  const normalized = value.toLowerCase().split('-')[0]
-  return localeSet.has(normalized as Locale) ? (normalized as Locale) : null
+  // 先尝试完整匹配，支持 zh-tw / zh-hant 这类带脚本或地区的 locale。
+  const normalized = value.trim().toLowerCase()
+  const exactMatch = localeAliasMap.get(normalized)
+  if (exactMatch) return exactMatch
+
+  // 再退回基础语言，保证 en-US -> en、zh-CN -> zh 这种常见情况也能命中。
+  const baseLocale = normalized.split('-')[0]
+  return localeSet.has(baseLocale as Locale) ? (baseLocale as Locale) : null
 }
 
 export function getStoredLocale(): Locale | null {
