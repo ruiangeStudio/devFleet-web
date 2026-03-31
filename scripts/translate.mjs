@@ -27,8 +27,10 @@ const LOCALES_CONFIG_PATH = join(I18N_DIR, 'locales.ts')
 
 const ENV_FILES = ['.env']
 const LOCALE_DEFINITIONS = loadLocaleDefinitions()
-const SOURCE_LOCALE = LOCALE_DEFINITIONS.find(locale => locale.isSource)?.code ?? 'zh'
-const SOURCE_LANG = LOCALE_DEFINITIONS.find(locale => locale.code === SOURCE_LOCALE)?.deeplTarget ?? 'ZH-HANS'
+const SOURCE_LOCALE_DEFINITION = LOCALE_DEFINITIONS.find(locale => locale.isSource)
+const SOURCE_LOCALE = SOURCE_LOCALE_DEFINITION?.code ?? 'zh'
+const SOURCE_LANG = SOURCE_LOCALE_DEFINITION?.deeplSource ?? SOURCE_LOCALE_DEFINITION?.deeplTarget ?? 'ZH'
+const SOURCE_LABEL = SOURCE_LOCALE_DEFINITION?.label ?? SOURCE_LOCALE.toUpperCase()
 const HUMAN_MAINTAINED_LOCALES = new Set(
   LOCALE_DEFINITIONS.filter(locale => locale.manual).map(locale => locale.code),
 )
@@ -163,12 +165,21 @@ function resolveTargetLocales() {
   }
 
   for (const locale of locales) {
+    if (locale === SOURCE_LOCALE) {
+      fail(`语言 ${locale} 是当前源语言，不需要再翻译回自己。`)
+    }
+
     if (!DEEPL_LANG_MAP[locale]) {
       fail(`不支持的语言代码：${locale}\n   支持的语言：${Object.keys(DEEPL_LANG_MAP).join(', ')}`)
     }
   }
 
   return locales
+}
+
+function shouldSkipTranslation(value) {
+  if (SKIP_TRANSLATION_PATTERNS.some(pattern => pattern.test(value))) return true
+  return !/[\p{L}\p{N}]/u.test(value)
 }
 
 // ===== 加载源文件 =====
@@ -259,7 +270,7 @@ function parseStaticExpression(expression, path) {
 async function translateObject(obj, translator, targetLang, path = '') {
   if (typeof obj === 'string') {
     // 跳过不需要翻译的值（纯符号、数字、已是代码的内容）
-    if (SKIP_TRANSLATION_PATTERNS.some(pattern => pattern.test(obj))) return obj
+    if (shouldSkipTranslation(obj)) return obj
 
     try {
       const result = await translator.translateText(obj, SOURCE_LANG, targetLang)
@@ -334,7 +345,7 @@ async function main() {
   }
 
   console.log(`\n🌐 DeepL 翻译脚本启动`)
-  console.log(`   源语言：Chinese (${SOURCE_LOCALE}.ts)`)
+  console.log(`   源语言：${SOURCE_LABEL} (${SOURCE_LOCALE}.ts / ${SOURCE_LANG})`)
   console.log(`   目标语言：${targetLocales.join(', ')}\n`)
 
   for (const locale of targetLocales) {

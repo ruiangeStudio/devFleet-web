@@ -133,7 +133,7 @@ npm run translate -- --lang fr,es,ar
 
 | locale | 语言 | DeepL 目标语言代码 |
 | --- | --- | --- |
-| `en` | 英语 | `EN` |
+| `en` | 英语 | `EN-US` |
 | `ja` | 日语 | `JA` |
 | `ko` | 韩语 | `KO` |
 | `de` | 德语 | `DE` |
@@ -141,7 +141,7 @@ npm run translate -- --lang fr,es,ar
 | `fr` | 法语 | `FR` |
 | `es` | 西班牙语 | `ES` |
 | `ar` | 阿拉伯语 | `AR` |
-| `zh` | 中文 | `ZH-HANS` |
+| `zh` | 中文源语言 | `ZH` |
 
 ## 脚本做了什么
 
@@ -152,6 +152,7 @@ npm run translate -- --lang fr,es,ar
 - 保留数组、对象层级结构不变
 - 直接覆盖目标语言文件，如 `src/i18n/messages/ja.ts`
 - 切到 `ar` 时自动把页面设为 RTL
+- 自动跳过纯 emoji、纯符号和常见品牌词
 
 脚本不会：
 - 执行 `zh.ts` 中的源码
@@ -161,7 +162,7 @@ npm run translate -- --lang fr,es,ar
 ## 哪些内容会跳过翻译
 
 以下内容默认会被保留：
-- 纯符号、纯数字、纯标点类内容
+- 纯 emoji、纯符号、纯数字、纯标点类内容
 - 常见品牌或工具名，如 `Windows`、`macOS`、`GitHub`、`npm`、`VSCode`、`Cursor`、`WebStorm`、`Tauri`
 
 如果后面你有新的品牌词要保留，可以去改 `scripts/translate.mjs` 里的 `SKIP_TRANSLATION_PATTERNS`。
@@ -170,12 +171,12 @@ npm run translate -- --lang fr,es,ar
 
 ```text
 🌐 DeepL 翻译脚本启动
-   源语言：Chinese (zh.ts)
+   源语言：中文 (zh.ts / ZH)
    目标语言：en, ja, ko, de, ru, fr, es, ar
 
 ✅ API Key 有效，本月已用字符：1,234 / 500,000
 
-📝 正在翻译 → en (EN)...
+📝 正在翻译 → en (EN-US)...
    ✅ 已写入 src/i18n/messages/en.ts
 
 📝 正在翻译 → ja (JA)...
@@ -206,8 +207,9 @@ npm run translate -- --lang fr,es,ar
 ## 注意事项
 
 - 脚本会直接覆盖目标语言文件，执行前建议先提交或备份当前修改。
-- 翻译失败的条目会保留英文原文，不会中断整个流程。
+- 翻译失败的条目会保留中文原文，不会中断整个流程。
 - `src/i18n/messages/zh.ts` 需要保持为静态 `export default` 对象，不要引入运行时代码。
+- `zh` 当前是源语言，只负责提供母本文案，不参与 `--all` 或 `--lang zh` 翻译。
 - 翻译完成后，建议人工快速检查一遍术语、品牌名和语气是否符合产品风格。
 
 ## 新增语言后的项目接入
