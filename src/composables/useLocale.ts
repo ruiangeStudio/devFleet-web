@@ -1,8 +1,11 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Locale } from '../i18n'
-
-const LOCALES: Locale[] = ['zh', 'en', 'ja']
+import {
+  SUPPORTED_LOCALES,
+  persistLocale,
+  syncDocumentLocale,
+  type Locale,
+} from '../i18n'
 
 export function useLocale() {
   const { locale } = useI18n()
@@ -10,15 +13,17 @@ export function useLocale() {
   const currentLocale = computed(() => locale.value as Locale)
 
   function toggleLocale() {
-    const idx = LOCALES.indexOf(locale.value as Locale)
-    const next = LOCALES[(idx + 1) % LOCALES.length]
+    const idx = SUPPORTED_LOCALES.indexOf(locale.value as Locale)
+    const next = SUPPORTED_LOCALES[(idx + 1) % SUPPORTED_LOCALES.length]
     locale.value = next
-    localStorage.setItem('devfleet-locale', next)
+    persistLocale(next)
+    syncDocumentLocale(next)
   }
 
   function setLocale(lang: Locale) {
     locale.value = lang
-    localStorage.setItem('devfleet-locale', lang)
+    persistLocale(lang)
+    syncDocumentLocale(lang)
   }
 
   return { currentLocale, toggleLocale, setLocale }

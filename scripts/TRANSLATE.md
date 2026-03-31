@@ -21,11 +21,10 @@
 
 ---
 
-## 第二步：安装依赖
+## 第二步：安装项目依赖
 
 ```powershell
-cd d:\claw\site
-npm install deepl-node
+npm install
 ```
 
 ---
@@ -35,19 +34,27 @@ npm install deepl-node
 ### 翻译单个语言
 
 ```powershell
-node scripts/translate.mjs --key "你的KEY:fx" --lang ja
+npm run translate -- --key "你的KEY:fx" --lang ja
 ```
 
 ### 翻译多个语言（逗号分隔）
 
 ```powershell
-node scripts/translate.mjs --key "你的KEY:fx" --lang ja,ko,de
+npm run translate -- --key "你的KEY:fx" --lang ja,ko,de
 ```
 
 ### 翻译所有语言（除中文外）
 
+`--all` 只会翻译当前项目已经启用的机翻语言，也就是 `ja, ko, de`。
+
 ```powershell
-node scripts/translate.mjs --key "你的KEY:fx" --all
+npm run translate -- --key "你的KEY:fx" --all
+```
+
+如果你要提前生成未来语言文件，比如法语或西班牙语，需要显式指定：
+
+```powershell
+npm run translate -- --key "你的KEY:fx" --lang fr,es
 ```
 
 ---
@@ -57,7 +64,7 @@ node scripts/translate.mjs --key "你的KEY:fx" --all
 **PowerShell（当前会话）：**
 ```powershell
 $env:DEEPL_API_KEY = "你的KEY:fx"
-node scripts/translate.mjs --lang ja,ko,de
+npm run translate -- --lang ja,ko,de
 ```
 
 **PowerShell（永久保存，重启后依然有效）：**
@@ -66,7 +73,7 @@ node scripts/translate.mjs --lang ja,ko,de
 ```
 设置后重新打开终端，直接运行：
 ```powershell
-node scripts/translate.mjs --lang ja,ko,de
+npm run translate -- --lang ja,ko,de
 ```
 
 ---
@@ -83,6 +90,7 @@ node scripts/translate.mjs --lang ja,ko,de
 | `zh` | 中文     | `ZH`       |
 
 > 💡 中文（`zh`）建议手动维护，机翻中文质量参差不齐。
+> 💡 `fr` / `es` 可以生成文件，但默认不会被 `--all` 覆盖，因为它们还不是当前站点的已启用语言。
 
 ---
 
@@ -115,6 +123,7 @@ node scripts/translate.mjs --lang ja,ko,de
 - 脚本会**直接覆盖**目标语言文件，执行前建议 `git commit` 保存当前状态
 - 品牌名（`Windows`、`macOS`、`GitHub`、`VSCode` 等）已设为**跳过翻译**，不会被改动
 - 翻译失败的条目会**保留原文**，不会中断整个流程
+- 脚本现在会用 TypeScript AST 安全读取 `en.ts`，不再通过 `new Function` 执行源码
 - 翻译完成后建议人工快速过一遍，重点检查：功能描述、专业术语
 
 ---

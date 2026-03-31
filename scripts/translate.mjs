@@ -3,16 +3,17 @@
  * 以 en.ts 为源语言，自动翻译并更新其他语言文件
  *
  * 使用方法：
- *   node scripts/translate.mjs --key YOUR_DEEPL_API_KEY --lang ja
- *   node scripts/translate.mjs --key YOUR_DEEPL_API_KEY --lang ja,ko,de
- *   node scripts/translate.mjs --key YOUR_DEEPL_API_KEY --all
+ *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja
+ *   npm run translate -- --key YOUR_DEEPL_API_KEY --lang ja,ko,de
+ *   npm run translate -- --key YOUR_DEEPL_API_KEY --all
  *
  * 也可以设置环境变量替代 --key 参数：
  *   $env:DEEPL_API_KEY="your-key"
- *   node scripts/translate.mjs --lang ja
+ *   npm run translate -- --lang ja
  */
 
 import * as deepl from 'deepl-node'
+import ts from 'typescript'
 import { readFileSync, writeFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
@@ -20,10 +21,16 @@ import { dirname, join } from 'path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const I18N_DIR = join(__dirname, '../src/i18n')
 
-// ===== 语言映射 =====
+const SOURCE_LOCALE = 'en'
+const SOURCE_LANG = 'EN'
+const HUMAN_MAINTAINED_LOCALES = new Set(['zh'])
+
+// 当前项目已接入的语言。--all 只会翻这些语言，避免生成前台不可达的死文件。
+const APP_ENABLED_LOCALES = ['zh', 'en', 'ja', 'ko', 'de']
+
 // key: 我们项目中的 locale 标识符
 // value: DeepL API 的目标语言代码
-const LANG_MAP = {
+const DEEPL_LANG_MAP = {
   zh: 'ZH',      // 中文（简体）
   ja: 'JA',      // 日语
   ko: 'KO',      // 韩语
@@ -32,8 +39,10 @@ const LANG_MAP = {
   es: 'ES',      // 西班牙语（备用）
 }
 
-// 以英文为源语言翻译（质量最好）
-const SOURCE_LANG = 'EN'
+const SKIP_TRANSLATION_PATTERNS = [
+  /^[©\d\s.,!?:;()\-_/\\]+$/,
+  /^(Windows|macOS|Linux|GitHub|npm|yarn|pnpm|bun|nvmd|nvs|nvm|VSCode|Cursor|WebStorm|Tauri)$/,
+]
 
 // ===== 解析命令行参数 =====
 const args = process.argv.slice(2)
@@ -43,54 +52,161 @@ function getArg(name) {
   return idx !== -1 ? args[idx + 1] : null
 }
 
-const apiKey = getArg('key') || process.env.DEEPL_API_KEY
-const targetAll = args.includes('--all')
-const langArg = getArg('lang')
+function printHelp() {
+  console.log(`
+DeepL 自动翻译脚本
 
-if (!apiKey) {
-  console.error('❌ 缺少 API Key！请用 --key 参数或 $env:DEEPL_API_KEY 环境变量提供。')
-  console.error('   示例：node scripts/translate.mjs --key YOUR_KEY --lang ja')
+用法：
+  npm run translate -- --lang ja
+  npm run translate -- --lang ja,ko,de
+  npm run translate -- --all
+
+参数：
+  --key <DEEPL_API_KEY>  可选，未传时读取环境变量 DEEPL_API_KEY
+  --lang <codes>         指定目标语言，多个用逗号分隔
+  --all                  翻译当前项目已启用的所有机翻语言
+  --help                 查看帮助
+
+说明：
+  --all 当前只会覆盖：${APP_ENABLED_LOCALES.filter(locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale)).join(', ')}
+  若要生成未来语言（如 fr / es），请显式传入 --lang fr
+`)
+}
+
+function fail(message) {
+  console.error(`❌ ${message}`)
   process.exit(1)
 }
 
-let targetLocales = []
-if (targetAll) {
-  // 排除 en（源语言）和 zh（手写质量更好，建议不用机翻覆盖中文）
-  targetLocales = Object.keys(LANG_MAP).filter(l => l !== 'zh')
-} else if (langArg) {
-  targetLocales = langArg.split(',').map(l => l.trim())
-} else {
-  console.error('❌ 请指定目标语言：--lang ja 或 --all')
-  process.exit(1)
+function normalizeLocale(locale) {
+  return locale.trim().toLowerCase()
 }
 
-// 验证语言代码
-for (const locale of targetLocales) {
-  if (!LANG_MAP[locale]) {
-    console.error(`❌ 不支持的语言代码：${locale}`)
-    console.error(`   支持的语言：${Object.keys(LANG_MAP).join(', ')}`)
-    process.exit(1)
+function resolveTargetLocales() {
+  const targetAll = args.includes('--all')
+  const langArg = getArg('lang')
+
+  if (targetAll) {
+    return APP_ENABLED_LOCALES.filter(
+      locale => locale !== SOURCE_LOCALE && !HUMAN_MAINTAINED_LOCALES.has(locale),
+    )
   }
+
+  if (!langArg) {
+    fail('请指定目标语言：--lang ja 或 --all')
+  }
+
+  const locales = Array.from(
+    new Set(
+      langArg
+        .split(',')
+        .map(normalizeLocale)
+        .filter(Boolean),
+    ),
+  )
+
+  if (locales.length === 0) {
+    fail('未解析到有效语言代码，请检查 --lang 参数')
+  }
+
+  for (const locale of locales) {
+    if (!DEEPL_LANG_MAP[locale]) {
+      fail(`不支持的语言代码：${locale}\n   支持的语言：${Object.keys(DEEPL_LANG_MAP).join(', ')}`)
+    }
+  }
+
+  return locales
 }
 
 // ===== 加载源文件 =====
 function loadSourceMessages() {
-  // 动态 import 不方便处理 .ts，改用读取 en.ts 并提取对象
-  // 策略：把 en.ts 内容当做模块执行
-  const enPath = join(I18N_DIR, 'en.ts')
-  // 读取文件内容，去掉 "export default" 让 eval 能处理
-  const raw = readFileSync(enPath, 'utf-8')
-  const cleaned = raw.replace(/^export default\s*/, '')
-  // 用 Function 构造器安全执行
-  return new Function(`return (${cleaned})`)()
+  const sourcePath = join(I18N_DIR, `${SOURCE_LOCALE}.ts`)
+  const raw = readFileSync(sourcePath, 'utf-8')
+  const sourceFile = ts.createSourceFile(sourcePath, raw, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+  const exportAssignment = sourceFile.statements.find(statement => ts.isExportAssignment(statement))
+
+  if (!exportAssignment) {
+    throw new Error(`未在 ${sourcePath} 中找到 export default`)
+  }
+
+  return parseStaticExpression(exportAssignment.expression, 'default export')
+}
+
+function unwrapExpression(expression) {
+  let current = expression
+
+  while (true) {
+    if (
+      ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isTypeAssertionExpression(current) ||
+      ts.isNonNullExpression(current) ||
+      ts.isSatisfiesExpression?.(current)
+    ) {
+      current = current.expression
+      continue
+    }
+
+    return current
+  }
+}
+
+function getPropertyName(name, path) {
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text
+  }
+
+  throw new Error(`${path} 包含不支持的对象 key 写法`)
+}
+
+function parseStaticExpression(expression, path) {
+  const node = unwrapExpression(expression)
+
+  if (ts.isObjectLiteralExpression(node)) {
+    const result = {}
+
+    for (const property of node.properties) {
+      if (!ts.isPropertyAssignment(property) || ts.isComputedPropertyName(property.name)) {
+        throw new Error(`${path} 只支持静态对象字面量`)
+      }
+
+      const key = getPropertyName(property.name, path)
+      result[key] = parseStaticExpression(property.initializer, `${path}.${key}`)
+    }
+
+    return result
+  }
+
+  if (ts.isArrayLiteralExpression(node)) {
+    return node.elements.map((element, index) => {
+      if (ts.isSpreadElement(element) || ts.isOmittedExpression(element)) {
+        throw new Error(`${path}[${index}] 只支持静态数组项`)
+      }
+
+      return parseStaticExpression(element, `${path}[${index}]`)
+    })
+  }
+
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text
+  }
+
+  if (ts.isNumericLiteral(node)) {
+    return Number(node.text)
+  }
+
+  if (node.kind === ts.SyntaxKind.TrueKeyword) return true
+  if (node.kind === ts.SyntaxKind.FalseKeyword) return false
+  if (node.kind === ts.SyntaxKind.NullKeyword) return null
+
+  throw new Error(`${path} 包含不支持的动态表达式，请保持 ${SOURCE_LOCALE}.ts 为静态对象`)
 }
 
 // ===== 递归翻译对象 =====
 async function translateObject(obj, translator, targetLang, path = '') {
   if (typeof obj === 'string') {
     // 跳过不需要翻译的值（纯符号、数字、已是代码的内容）
-    if (/^[©\d\s\.\-_\/\\]+$/.test(obj)) return obj
-    if (/^(Windows|macOS|Linux|GitHub|npm|yarn|pnpm|bun|nvmd|nvs|nvm|VSCode|Cursor|WebStorm|Tauri)$/.test(obj)) return obj
+    if (SKIP_TRANSLATION_PATTERNS.some(pattern => pattern.test(obj))) return obj
 
     try {
       const result = await translator.translateText(obj, SOURCE_LANG, targetLang)
@@ -151,9 +267,28 @@ function serializeToTs(obj, indent = 0) {
 
 // ===== 主流程 =====
 async function main() {
+  if (args.includes('--help') || args.includes('-h')) {
+    printHelp()
+    process.exit(0)
+  }
+
+  const targetLocales = resolveTargetLocales()
+  const source = loadSourceMessages()
+  const apiKey = getArg('key') || process.env.DEEPL_API_KEY
+
+  if (!apiKey) {
+    fail('缺少 API Key！请用 --key 参数或 DEEPL_API_KEY 环境变量提供。')
+  }
+
   console.log(`\n🌐 DeepL 翻译脚本启动`)
-  console.log(`   源语言：English (en.ts)`)
+  console.log(`   源语言：English (${SOURCE_LOCALE}.ts)`)
   console.log(`   目标语言：${targetLocales.join(', ')}\n`)
+
+  for (const locale of targetLocales) {
+    if (!APP_ENABLED_LOCALES.includes(locale)) {
+      console.log(`   ℹ️ ${locale} 当前还未在前台注册，生成文件后还需要补充 i18n 配置`)
+    }
+  }
 
   const translator = new deepl.Translator(apiKey)
 
@@ -168,10 +303,8 @@ async function main() {
     process.exit(1)
   }
 
-  const source = loadSourceMessages()
-
   for (const locale of targetLocales) {
-    const deeplLang = LANG_MAP[locale]
+    const deeplLang = DEEPL_LANG_MAP[locale]
     console.log(`📝 正在翻译 → ${locale} (${deeplLang})...`)
 
     const translated = await translateObject(source, translator, deeplLang)

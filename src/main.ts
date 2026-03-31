@@ -1,7 +1,7 @@
-import { createApp } from 'vue'
+import { createApp, watchEffect } from 'vue'
 import './style.css'
 import App from './App.vue'
-import { i18n } from './i18n'
+import { i18n, syncDocumentLocale, type Locale } from './i18n'
 
 const app = createApp(App)
 
@@ -18,6 +18,10 @@ app.directive('click-outside', {
   unmounted(el) {
     document.removeEventListener('mousedown', el._clickOutsideHandler)
   },
+})
+
+watchEffect(() => {
+  syncDocumentLocale(i18n.global.locale.value as Locale)
 })
 
 app.use(i18n).mount('#app')
